@@ -7,6 +7,43 @@
   "topLevel": true,
   "allAtoms": [
     {
+      "atomType": "Gcode",
+      "x": 0.6,
+      "y": 0.6,
+      "uniqueID": "id-11",
+      "ioValues": [
+        {
+          "name": "geometry",
+          "ioValue": "__GEOMETRY_INPUT__"
+        },
+        {
+          "name": "Tool Size",
+          "ioValue": 3.125,
+          "currentEquation": "3.125"
+        },
+        {
+          "name": "Passes",
+          "ioValue": 3
+        },
+        {
+          "name": "Speed",
+          "ioValue": 1800,
+          "currentEquation": "1800"
+        },
+        {
+          "name": "Cut Through",
+          "ioValue": 0
+        },
+        {
+          "name": "Part Name",
+          "ioValue": "gcodeTest",
+          "currentEquation": "gcodeTest"
+        }
+      ],
+      "partName": "gcodeTest",
+      "sortDirection": "Left"
+    },
+    {
       "atomType": "Output",
       "x": 1,
       "y": 0.5,
@@ -26,7 +63,8 @@
       "ioValues": [
         {
           "name": "diameter",
-          "ioValue": 50
+          "ioValue": 60,
+          "currentEquation": "60"
         }
       ]
     },
@@ -42,7 +80,8 @@
         },
         {
           "name": "height",
-          "ioValue": 10
+          "ioValue": 8,
+          "currentEquation": "8"
         }
       ]
     }
@@ -52,6 +91,11 @@
       "ap2Name": "geometry",
       "ap1ID": "id-4",
       "ap2ID": "id-7"
+    },
+    {
+      "ap2Name": "geometry",
+      "ap1ID": "id-7",
+      "ap2ID": "id-11"
     }
   ],
   "unitsKey": "MM",
