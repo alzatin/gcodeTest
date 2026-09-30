@@ -18,8 +18,7 @@
         },
         {
           "name": "Tool Size",
-          "ioValue": 3.125,
-          "currentEquation": "3.125"
+          "ioValue": 3.125
         },
         {
           "name": "Passes",
@@ -27,8 +26,7 @@
         },
         {
           "name": "Speed",
-          "ioValue": 1800,
-          "currentEquation": "1800"
+          "ioValue": 1800
         },
         {
           "name": "Cut Through",
@@ -63,8 +61,7 @@
       "ioValues": [
         {
           "name": "diameter",
-          "ioValue": 60,
-          "currentEquation": "60"
+          "ioValue": 60
         }
       ]
     },
@@ -80,8 +77,7 @@
         },
         {
           "name": "height",
-          "ioValue": 8,
-          "currentEquation": "8"
+          "ioValue": 8
         }
       ]
     }
