@@ -1,338 +1,338 @@
 {
-  "atomType": "Molecule",
-  "x": 0,
-  "y": 0,
-  "uniqueID": "id-1",
-  "name": "gcodeTest",
-  "topLevel": true,
-  "allAtoms": [
-    {
-      "atomType": "Molecule",
-      "x": 0.5,
-      "y": 0.5,
-      "uniqueID": "id-122",
-      "name": "MatchFaces",
-      "ioValues": [
+    "atomType": "Molecule",
+    "x": 0,
+    "y": 0,
+    "uniqueID": "id-1",
+    "name": "matchFaces",
+    "topLevel": true,
+    "allAtoms": [
         {
-          "name": "Static",
-          "ioValue": "__GEOMETRY_INPUT__"
+            "atomType": "Molecule",
+            "x": 0.5,
+            "y": 0.5,
+            "uniqueID": "id-122",
+            "name": "MatchFaces",
+            "ioValues": [
+                {
+                    "name": "Static",
+                    "ioValue": "__GEOMETRY_INPUT__"
+                },
+                {
+                    "name": "Moving",
+                    "ioValue": "__GEOMETRY_INPUT__"
+                }
+            ],
+            "topLevel": false,
+            "allAtoms": [
+                {
+                    "atomType": "Output",
+                    "x": 1,
+                    "y": 0.5,
+                    "uniqueID": "id-124",
+                    "ioValues": [
+                        {
+                            "name": "number or geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Input",
+                    "x": 0,
+                    "y": 0.2,
+                    "uniqueID": "id-126",
+                    "name": "Static",
+                    "type": "faceselect",
+                    "options": [],
+                    "selectedFaceData": {
+                        "0": [
+                            5
+                        ]
+                    }
+                },
+                {
+                    "atomType": "Input",
+                    "x": 0,
+                    "y": 0.4,
+                    "uniqueID": "id-129",
+                    "name": "Moving",
+                    "type": "faceselect",
+                    "options": [],
+                    "selectedFaceData": {
+                        "0": [
+                            0
+                        ]
+                    }
+                },
+                {
+                    "atomType": "Code",
+                    "x": 0.5,
+                    "y": 0.5,
+                    "uniqueID": "id-132",
+                    "ioValues": [
+                        {
+                            "name": "staticSel",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        },
+                        {
+                            "name": "movingSel",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        }
+                    ],
+                    "interpreterVersion": 1,
+                    "code": "// Match two faces: keep the Static shape put and move the Moving shape so its\n// clicked face sits flush against the Static shape's clicked face.\nfunction run(staticSel: Assembly, movingSel: Assembly) {\n  if (!staticSel || !movingSel) {\n    throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n  }\n\n  function pick(a: Assembly, label: string) {\n    let picked = null;\n    a.onLeafs((leaf) => {\n      if (picked && picked.face) return leaf;\n      const g = leaf.geometry;\n      if (g instanceof replicad.Drawing) {\n        throw new Error(label + \" must be a 3D shape, not a 2D drawing.\");\n      }\n      const idxs = (leaf.selection && leaf.selection.faces) || [];\n      if (idxs.length > 0) {\n        picked = { leaf: leaf, geom: g, face: g.faces[idxs[0]] };\n      } else if (!picked) {\n        picked = { leaf: leaf, geom: g, face: null };\n      }\n      return leaf;\n    });\n    return picked;\n  }\n\n  const s = pick(staticSel, \"Static\");\n  const m = pick(movingSel, \"Moving\");\n  if (!s || !m) {\n    throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n  }\n\n  const staticOut = new Assembly({ ...s.leaf, geometry: s.geom, selection: undefined });\n\n  // Nothing clicked yet on one side: leave both shapes where they are.\n  if (!s.face || !m.face) {\n    const passThrough = new Assembly({ ...m.leaf, geometry: m.geom, selection: undefined });\n    return new Assembly({ geometry: [staticOut, passThrough] });\n  }\n\n  const Cs = s.face.center;\n  const Cm = m.face.center;\n  const Ns = s.face.normalAt(Cs.toTuple()).normalized();\n  const Nm = m.face.normalAt(Cm.toTuple()).normalized();\n\n  // The moving face should end up pointing opposite the static face.\n  const targetDir = Ns.multiply(-1);\n\n  let dot = Nm.dot(targetDir);\n  dot = Math.max(-1, Math.min(1, dot));\n  const angleDeg = (Math.acos(dot) * 180) / Math.PI;\n\n  const cross = Nm.cross(targetDir);\n  let axisTuple;\n  if (cross.Length < 1e-9) {\n    // Normals already (anti)parallel; for a 180 flip pick any perpendicular axis.\n    let perp = Nm.cross(new replicad.Vector([1, 0, 0]));\n    if (perp.Length < 1e-9) perp = Nm.cross(new replicad.Vector([0, 1, 0]));\n    axisTuple = perp.normalized().toTuple();\n  } else {\n    axisTuple = cross.normalized().toTuple();\n  }\n\n  const cm = Cm.toTuple();\n  const cs = Cs.toTuple();\n\n  // Rotate about the moving face centre (keeps it in place), then slide that\n  // centre onto the static face centre so the faces are flush and aligned.\n  const moved = m.geom\n    .clone()\n    .rotate(angleDeg, cm, axisTuple)\n    .translate([cs[0] - cm[0], cs[1] - cm[1], cs[2] - cm[2]]);\n\n  const movingOut = new Assembly({ ...m.leaf, geometry: moved, selection: undefined });\n  return new Assembly({ geometry: [staticOut, movingOut] });\n}\n",
+                    "compiledCode": "\"use strict\";\n// Match two faces: keep the Static shape put and move the Moving shape so its\n// clicked face sits flush against the Static shape's clicked face.\nfunction run(staticSel, movingSel) {\n    if (!staticSel || !movingSel) {\n        throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n    }\n    function pick(a, label) {\n        let picked = null;\n        a.onLeafs((leaf) => {\n            if (picked && picked.face)\n                return leaf;\n            const g = leaf.geometry;\n            if (g instanceof replicad.Drawing) {\n                throw new Error(label + \" must be a 3D shape, not a 2D drawing.\");\n            }\n            const idxs = (leaf.selection && leaf.selection.faces) || [];\n            if (idxs.length > 0) {\n                picked = { leaf: leaf, geom: g, face: g.faces[idxs[0]] };\n            }\n            else if (!picked) {\n                picked = { leaf: leaf, geom: g, face: null };\n            }\n            return leaf;\n        });\n        return picked;\n    }\n    const s = pick(staticSel, \"Static\");\n    const m = pick(movingSel, \"Moving\");\n    if (!s || !m) {\n        throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n    }\n    const staticOut = new Assembly({ ...s.leaf, geometry: s.geom, selection: undefined });\n    // Nothing clicked yet on one side: leave both shapes where they are.\n    if (!s.face || !m.face) {\n        const passThrough = new Assembly({ ...m.leaf, geometry: m.geom, selection: undefined });\n        return new Assembly({ geometry: [staticOut, passThrough] });\n    }\n    const Cs = s.face.center;\n    const Cm = m.face.center;\n    const Ns = s.face.normalAt(Cs.toTuple()).normalized();\n    const Nm = m.face.normalAt(Cm.toTuple()).normalized();\n    // The moving face should end up pointing opposite the static face.\n    const targetDir = Ns.multiply(-1);\n    let dot = Nm.dot(targetDir);\n    dot = Math.max(-1, Math.min(1, dot));\n    const angleDeg = (Math.acos(dot) * 180) / Math.PI;\n    const cross = Nm.cross(targetDir);\n    let axisTuple;\n    if (cross.Length < 1e-9) {\n        // Normals already (anti)parallel; for a 180 flip pick any perpendicular axis.\n        let perp = Nm.cross(new replicad.Vector([1, 0, 0]));\n        if (perp.Length < 1e-9)\n            perp = Nm.cross(new replicad.Vector([0, 1, 0]));\n        axisTuple = perp.normalized().toTuple();\n    }\n    else {\n        axisTuple = cross.normalized().toTuple();\n    }\n    const cm = Cm.toTuple();\n    const cs = Cs.toTuple();\n    // Rotate about the moving face centre (keeps it in place), then slide that\n    // centre onto the static face centre so the faces are flush and aligned.\n    const moved = m.geom\n        .clone()\n        .rotate(angleDeg, cm, axisTuple)\n        .translate([cs[0] - cm[0], cs[1] - cm[1], cs[2] - cm[2]]);\n    const movingOut = new Assembly({ ...m.leaf, geometry: moved, selection: undefined });\n    return new Assembly({ geometry: [staticOut, movingOut] });\n}\n"
+                }
+            ],
+            "allConnectors": [
+                {
+                    "ap2Name": "staticSel",
+                    "ap1ID": "id-126",
+                    "ap2ID": "id-132"
+                },
+                {
+                    "ap2Name": "movingSel",
+                    "ap1ID": "id-129",
+                    "ap2ID": "id-132"
+                },
+                {
+                    "ap2Name": "number or geometry",
+                    "ap1ID": "id-132",
+                    "ap2ID": "id-124"
+                }
+            ],
+            "fileTypeVersion": 1
         },
         {
-          "name": "Moving",
-          "ioValue": "__GEOMETRY_INPUT__"
-        }
-      ],
-      "topLevel": false,
-      "allAtoms": [
-        {
-          "atomType": "Output",
-          "x": 1,
-          "y": 0.5,
-          "uniqueID": "id-124",
-          "ioValues": [
-            {
-              "name": "number or geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            }
-          ]
+            "atomType": "Molecule",
+            "x": 0.2,
+            "y": 0.3,
+            "uniqueID": "id-158",
+            "name": "StaticBox",
+            "topLevel": false,
+            "allAtoms": [
+                {
+                    "atomType": "Output",
+                    "x": 1,
+                    "y": 0.5,
+                    "uniqueID": "id-160",
+                    "ioValues": [
+                        {
+                            "name": "number or geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Rectangle",
+                    "x": 0.2,
+                    "y": 0.4,
+                    "uniqueID": "id-162",
+                    "ioValues": [
+                        {
+                            "name": "x length",
+                            "ioValue": 40
+                        },
+                        {
+                            "name": "y length",
+                            "ioValue": 40
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Extrude",
+                    "x": 0.4,
+                    "y": 0.5,
+                    "uniqueID": "id-166",
+                    "ioValues": [
+                        {
+                            "name": "geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        },
+                        {
+                            "name": "height",
+                            "ioValue": 20
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Color",
+                    "x": 0.6,
+                    "y": 0.4,
+                    "uniqueID": "id-170",
+                    "ioValues": [
+                        {
+                            "name": "geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        }
+                    ],
+                    "selectedColor": "Blue"
+                }
+            ],
+            "allConnectors": [
+                {
+                    "ap2Name": "geometry",
+                    "ap1ID": "id-162",
+                    "ap2ID": "id-166"
+                },
+                {
+                    "ap2Name": "geometry",
+                    "ap1ID": "id-166",
+                    "ap2ID": "id-170"
+                },
+                {
+                    "ap2Name": "number or geometry",
+                    "ap1ID": "id-170",
+                    "ap2ID": "id-160"
+                }
+            ],
+            "fileTypeVersion": 1
         },
         {
-          "atomType": "Input",
-          "x": 0,
-          "y": 0.2,
-          "uniqueID": "id-126",
-          "name": "Static",
-          "type": "faceselect",
-          "options": [],
-          "selectedFaceData": {
-            "0": [
-              5
+            "atomType": "Molecule",
+            "x": 0.2,
+            "y": 0.6,
+            "uniqueID": "id-173",
+            "name": "MovingBox",
+            "topLevel": false,
+            "allAtoms": [
+                {
+                    "atomType": "Output",
+                    "x": 1,
+                    "y": 0.5,
+                    "uniqueID": "id-175",
+                    "ioValues": [
+                        {
+                            "name": "number or geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Rectangle",
+                    "x": 0.1,
+                    "y": 0.4,
+                    "uniqueID": "id-177",
+                    "ioValues": [
+                        {
+                            "name": "x length",
+                            "ioValue": 30
+                        },
+                        {
+                            "name": "y length",
+                            "ioValue": 30
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Extrude",
+                    "x": 0.3,
+                    "y": 0.4,
+                    "uniqueID": "id-181",
+                    "ioValues": [
+                        {
+                            "name": "geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        },
+                        {
+                            "name": "height",
+                            "ioValue": 30
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Move",
+                    "x": 0.5,
+                    "y": 0.4,
+                    "uniqueID": "id-185",
+                    "ioValues": [
+                        {
+                            "name": "geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        },
+                        {
+                            "name": "xDist",
+                            "ioValue": 120
+                        },
+                        {
+                            "name": "yDist",
+                            "ioValue": 0
+                        },
+                        {
+                            "name": "zDist",
+                            "ioValue": 0
+                        }
+                    ]
+                },
+                {
+                    "atomType": "Color",
+                    "x": 0.7,
+                    "y": 0.4,
+                    "uniqueID": "id-191",
+                    "ioValues": [
+                        {
+                            "name": "geometry",
+                            "ioValue": "__GEOMETRY_INPUT__"
+                        }
+                    ],
+                    "selectedColor": "Orange"
+                }
+            ],
+            "allConnectors": [
+                {
+                    "ap2Name": "geometry",
+                    "ap1ID": "id-177",
+                    "ap2ID": "id-181"
+                },
+                {
+                    "ap2Name": "geometry",
+                    "ap1ID": "id-181",
+                    "ap2ID": "id-185"
+                },
+                {
+                    "ap2Name": "geometry",
+                    "ap1ID": "id-185",
+                    "ap2ID": "id-191"
+                },
+                {
+                    "ap2Name": "number or geometry",
+                    "ap1ID": "id-191",
+                    "ap2ID": "id-175"
+                }
+            ],
+            "fileTypeVersion": 1
+        },
+        {
+            "atomType": "Output",
+            "x": 1,
+            "y": 0.5,
+            "uniqueID": "id-2",
+            "ioValues": [
+                {
+                    "name": "number or geometry",
+                    "ioValue": "__GEOMETRY_INPUT__"
+                }
             ]
-          }
-        },
-        {
-          "atomType": "Input",
-          "x": 0,
-          "y": 0.4,
-          "uniqueID": "id-129",
-          "name": "Moving",
-          "type": "faceselect",
-          "options": [],
-          "selectedFaceData": {
-            "0": [
-              0
-            ]
-          }
-        },
-        {
-          "atomType": "Code",
-          "x": 0.5,
-          "y": 0.5,
-          "uniqueID": "id-132",
-          "ioValues": [
-            {
-              "name": "staticSel",
-              "ioValue": "__GEOMETRY_INPUT__"
-            },
-            {
-              "name": "movingSel",
-              "ioValue": "__GEOMETRY_INPUT__"
-            }
-          ],
-          "interpreterVersion": 1,
-          "code": "// Match two faces: keep the Static shape put and move the Moving shape so its\n// clicked face sits flush against the Static shape's clicked face.\nfunction run(staticSel: Assembly, movingSel: Assembly) {\n  if (!staticSel || !movingSel) {\n    throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n  }\n\n  function pick(a: Assembly, label: string) {\n    let picked = null;\n    a.onLeafs((leaf) => {\n      if (picked && picked.face) return leaf;\n      const g = leaf.geometry;\n      if (g instanceof replicad.Drawing) {\n        throw new Error(label + \" must be a 3D shape, not a 2D drawing.\");\n      }\n      const idxs = (leaf.selection && leaf.selection.faces) || [];\n      if (idxs.length > 0) {\n        picked = { leaf: leaf, geom: g, face: g.faces[idxs[0]] };\n      } else if (!picked) {\n        picked = { leaf: leaf, geom: g, face: null };\n      }\n      return leaf;\n    });\n    return picked;\n  }\n\n  const s = pick(staticSel, \"Static\");\n  const m = pick(movingSel, \"Moving\");\n  if (!s || !m) {\n    throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n  }\n\n  const staticOut = new Assembly({ ...s.leaf, geometry: s.geom, selection: undefined });\n\n  // Nothing clicked yet on one side: leave both shapes where they are.\n  if (!s.face || !m.face) {\n    const passThrough = new Assembly({ ...m.leaf, geometry: m.geom, selection: undefined });\n    return new Assembly({ geometry: [staticOut, passThrough] });\n  }\n\n  const Cs = s.face.center;\n  const Cm = m.face.center;\n  const Ns = s.face.normalAt(Cs.toTuple()).normalized();\n  const Nm = m.face.normalAt(Cm.toTuple()).normalized();\n\n  // The moving face should end up pointing opposite the static face.\n  const targetDir = Ns.multiply(-1);\n\n  let dot = Nm.dot(targetDir);\n  dot = Math.max(-1, Math.min(1, dot));\n  const angleDeg = (Math.acos(dot) * 180) / Math.PI;\n\n  const cross = Nm.cross(targetDir);\n  let axisTuple;\n  if (cross.Length < 1e-9) {\n    // Normals already (anti)parallel; for a 180 flip pick any perpendicular axis.\n    let perp = Nm.cross(new replicad.Vector([1, 0, 0]));\n    if (perp.Length < 1e-9) perp = Nm.cross(new replicad.Vector([0, 1, 0]));\n    axisTuple = perp.normalized().toTuple();\n  } else {\n    axisTuple = cross.normalized().toTuple();\n  }\n\n  const cm = Cm.toTuple();\n  const cs = Cs.toTuple();\n\n  // Rotate about the moving face centre (keeps it in place), then slide that\n  // centre onto the static face centre so the faces are flush and aligned.\n  const moved = m.geom\n    .clone()\n    .rotate(angleDeg, cm, axisTuple)\n    .translate([cs[0] - cm[0], cs[1] - cm[1], cs[2] - cm[2]]);\n\n  const movingOut = new Assembly({ ...m.leaf, geometry: moved, selection: undefined });\n  return new Assembly({ geometry: [staticOut, movingOut] });\n}\n",
-          "compiledCode": "\"use strict\";\n// Match two faces: keep the Static shape put and move the Moving shape so its\n// clicked face sits flush against the Static shape's clicked face.\nfunction run(staticSel, movingSel) {\n    if (!staticSel || !movingSel) {\n        throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n    }\n    function pick(a, label) {\n        let picked = null;\n        a.onLeafs((leaf) => {\n            if (picked && picked.face)\n                return leaf;\n            const g = leaf.geometry;\n            if (g instanceof replicad.Drawing) {\n                throw new Error(label + \" must be a 3D shape, not a 2D drawing.\");\n            }\n            const idxs = (leaf.selection && leaf.selection.faces) || [];\n            if (idxs.length > 0) {\n                picked = { leaf: leaf, geom: g, face: g.faces[idxs[0]] };\n            }\n            else if (!picked) {\n                picked = { leaf: leaf, geom: g, face: null };\n            }\n            return leaf;\n        });\n        return picked;\n    }\n    const s = pick(staticSel, \"Static\");\n    const m = pick(movingSel, \"Moving\");\n    if (!s || !m) {\n        throw new Error(\"Connect a 3D shape to both Static and Moving.\");\n    }\n    const staticOut = new Assembly({ ...s.leaf, geometry: s.geom, selection: undefined });\n    // Nothing clicked yet on one side: leave both shapes where they are.\n    if (!s.face || !m.face) {\n        const passThrough = new Assembly({ ...m.leaf, geometry: m.geom, selection: undefined });\n        return new Assembly({ geometry: [staticOut, passThrough] });\n    }\n    const Cs = s.face.center;\n    const Cm = m.face.center;\n    const Ns = s.face.normalAt(Cs.toTuple()).normalized();\n    const Nm = m.face.normalAt(Cm.toTuple()).normalized();\n    // The moving face should end up pointing opposite the static face.\n    const targetDir = Ns.multiply(-1);\n    let dot = Nm.dot(targetDir);\n    dot = Math.max(-1, Math.min(1, dot));\n    const angleDeg = (Math.acos(dot) * 180) / Math.PI;\n    const cross = Nm.cross(targetDir);\n    let axisTuple;\n    if (cross.Length < 1e-9) {\n        // Normals already (anti)parallel; for a 180 flip pick any perpendicular axis.\n        let perp = Nm.cross(new replicad.Vector([1, 0, 0]));\n        if (perp.Length < 1e-9)\n            perp = Nm.cross(new replicad.Vector([0, 1, 0]));\n        axisTuple = perp.normalized().toTuple();\n    }\n    else {\n        axisTuple = cross.normalized().toTuple();\n    }\n    const cm = Cm.toTuple();\n    const cs = Cs.toTuple();\n    // Rotate about the moving face centre (keeps it in place), then slide that\n    // centre onto the static face centre so the faces are flush and aligned.\n    const moved = m.geom\n        .clone()\n        .rotate(angleDeg, cm, axisTuple)\n        .translate([cs[0] - cm[0], cs[1] - cm[1], cs[2] - cm[2]]);\n    const movingOut = new Assembly({ ...m.leaf, geometry: moved, selection: undefined });\n    return new Assembly({ geometry: [staticOut, movingOut] });\n}\n"
         }
-      ],
-      "allConnectors": [
+    ],
+    "allConnectors": [
         {
-          "ap2Name": "staticSel",
-          "ap1ID": "id-126",
-          "ap2ID": "id-132"
+            "ap2Name": "number or geometry",
+            "ap1ID": "id-122",
+            "ap2ID": "id-2"
         },
         {
-          "ap2Name": "movingSel",
-          "ap1ID": "id-129",
-          "ap2ID": "id-132"
+            "ap2Name": "Static",
+            "ap1ID": "id-158",
+            "ap2ID": "id-122"
         },
         {
-          "ap2Name": "number or geometry",
-          "ap1ID": "id-132",
-          "ap2ID": "id-124"
+            "ap2Name": "Moving",
+            "ap1ID": "id-173",
+            "ap2ID": "id-122"
         }
-      ],
-      "fileTypeVersion": 1
-    },
-    {
-      "atomType": "Molecule",
-      "x": 0.2,
-      "y": 0.3,
-      "uniqueID": "id-158",
-      "name": "StaticBox",
-      "topLevel": false,
-      "allAtoms": [
-        {
-          "atomType": "Output",
-          "x": 1,
-          "y": 0.5,
-          "uniqueID": "id-160",
-          "ioValues": [
-            {
-              "name": "number or geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            }
-          ]
-        },
-        {
-          "atomType": "Rectangle",
-          "x": 0.2,
-          "y": 0.4,
-          "uniqueID": "id-162",
-          "ioValues": [
-            {
-              "name": "x length",
-              "ioValue": 40
-            },
-            {
-              "name": "y length",
-              "ioValue": 40
-            }
-          ]
-        },
-        {
-          "atomType": "Extrude",
-          "x": 0.4,
-          "y": 0.5,
-          "uniqueID": "id-166",
-          "ioValues": [
-            {
-              "name": "geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            },
-            {
-              "name": "height",
-              "ioValue": 20
-            }
-          ]
-        },
-        {
-          "atomType": "Color",
-          "x": 0.6,
-          "y": 0.4,
-          "uniqueID": "id-170",
-          "ioValues": [
-            {
-              "name": "geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            }
-          ],
-          "selectedColor": "Blue"
-        }
-      ],
-      "allConnectors": [
-        {
-          "ap2Name": "geometry",
-          "ap1ID": "id-162",
-          "ap2ID": "id-166"
-        },
-        {
-          "ap2Name": "geometry",
-          "ap1ID": "id-166",
-          "ap2ID": "id-170"
-        },
-        {
-          "ap2Name": "number or geometry",
-          "ap1ID": "id-170",
-          "ap2ID": "id-160"
-        }
-      ],
-      "fileTypeVersion": 1
-    },
-    {
-      "atomType": "Molecule",
-      "x": 0.2,
-      "y": 0.6,
-      "uniqueID": "id-173",
-      "name": "MovingBox",
-      "topLevel": false,
-      "allAtoms": [
-        {
-          "atomType": "Output",
-          "x": 1,
-          "y": 0.5,
-          "uniqueID": "id-175",
-          "ioValues": [
-            {
-              "name": "number or geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            }
-          ]
-        },
-        {
-          "atomType": "Rectangle",
-          "x": 0.1,
-          "y": 0.4,
-          "uniqueID": "id-177",
-          "ioValues": [
-            {
-              "name": "x length",
-              "ioValue": 30
-            },
-            {
-              "name": "y length",
-              "ioValue": 30
-            }
-          ]
-        },
-        {
-          "atomType": "Extrude",
-          "x": 0.3,
-          "y": 0.4,
-          "uniqueID": "id-181",
-          "ioValues": [
-            {
-              "name": "geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            },
-            {
-              "name": "height",
-              "ioValue": 30
-            }
-          ]
-        },
-        {
-          "atomType": "Move",
-          "x": 0.5,
-          "y": 0.4,
-          "uniqueID": "id-185",
-          "ioValues": [
-            {
-              "name": "geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            },
-            {
-              "name": "xDist",
-              "ioValue": 120
-            },
-            {
-              "name": "yDist",
-              "ioValue": 0
-            },
-            {
-              "name": "zDist",
-              "ioValue": 0
-            }
-          ]
-        },
-        {
-          "atomType": "Color",
-          "x": 0.7,
-          "y": 0.4,
-          "uniqueID": "id-191",
-          "ioValues": [
-            {
-              "name": "geometry",
-              "ioValue": "__GEOMETRY_INPUT__"
-            }
-          ],
-          "selectedColor": "Orange"
-        }
-      ],
-      "allConnectors": [
-        {
-          "ap2Name": "geometry",
-          "ap1ID": "id-177",
-          "ap2ID": "id-181"
-        },
-        {
-          "ap2Name": "geometry",
-          "ap1ID": "id-181",
-          "ap2ID": "id-185"
-        },
-        {
-          "ap2Name": "geometry",
-          "ap1ID": "id-185",
-          "ap2ID": "id-191"
-        },
-        {
-          "ap2Name": "number or geometry",
-          "ap1ID": "id-191",
-          "ap2ID": "id-175"
-        }
-      ],
-      "fileTypeVersion": 1
-    },
-    {
-      "atomType": "Output",
-      "x": 1,
-      "y": 0.5,
-      "uniqueID": "id-2",
-      "ioValues": [
-        {
-          "name": "number or geometry",
-          "ioValue": "__GEOMETRY_INPUT__"
-        }
-      ]
-    }
-  ],
-  "allConnectors": [
-    {
-      "ap2Name": "number or geometry",
-      "ap1ID": "id-122",
-      "ap2ID": "id-2"
-    },
-    {
-      "ap2Name": "Static",
-      "ap1ID": "id-158",
-      "ap2ID": "id-122"
-    },
-    {
-      "ap2Name": "Moving",
-      "ap1ID": "id-173",
-      "ap2ID": "id-122"
-    }
-  ],
-  "unitsKey": "MM",
-  "fileTypeVersion": 1,
-  "filetypeVersion": 1
+    ],
+    "unitsKey": "MM",
+    "fileTypeVersion": 1,
+    "filetypeVersion": 1
 }
